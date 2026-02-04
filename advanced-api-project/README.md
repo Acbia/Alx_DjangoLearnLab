@@ -64,6 +64,20 @@ Order by publication year:
 curl "http://127.0.0.1:8000/api/books/?ordering=-publication_year"
 ```
 
+## Testing
+
+Tests are written using Django's built-in test framework and DRF's test client.
+They live in `api/test_views.py` and cover:
+- CRUD operations for books
+- Filtering, searching, and ordering
+- Permission enforcement for write actions
+
+Run the tests with:
+
+```bash
+python manage.py test api
+```
+
 Create a book (replace `<token>` with an auth token if using token auth):
 
 ```bash
