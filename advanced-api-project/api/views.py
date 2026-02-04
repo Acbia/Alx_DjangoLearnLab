@@ -1,5 +1,6 @@
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, generics
+from django_filters import rest_framework
+from rest_framework import generics
+from rest_framework import filters
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 
 from .models import Book
@@ -13,7 +14,11 @@ class BookListView(generics.ListAPIView):
     # Read-only for unauthenticated users; write requires authentication.
     permission_classes = [IsAuthenticatedOrReadOnly]
     # Filtering, searching, and ordering for advanced queries.
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [
+        rest_framework.DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
     filterset_fields = ["title", "publication_year", "author", "author__name"]
     search_fields = ["title", "author__name"]
     ordering_fields = ["title", "publication_year"]
