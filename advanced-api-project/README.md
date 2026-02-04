@@ -9,7 +9,9 @@ All API routes are prefixed with `/api/`.
 
 - `GET /api/books/`
   - Lists all books (public).
-  - Supports search and ordering:
+  - Supports filtering, search, and ordering:
+    - Filter: `?title=Earthsea`, `?publication_year=1968`,
+      `?author=1`, `?author__name=Le%20Guin`
     - `?search=earthsea`
     - `?ordering=publication_year` or `?ordering=-publication_year`
 - `GET /api/books/<id>/`
@@ -31,8 +33,8 @@ All API routes are prefixed with `/api/`.
 ## View Configuration Notes
 
 - Views are implemented with DRF generic views in `api/views.py`.
-- `BookListView` adds `SearchFilter` and `OrderingFilter` to demonstrate
-  built-in DRF filtering.
+- `BookListView` adds `DjangoFilterBackend`, `SearchFilter`, and
+  `OrderingFilter` for advanced queries.
 - `BookCreateView` and `BookUpdateView` override `perform_create` and
   `perform_update` as extension hooks; serializer validation runs before save.
 
@@ -42,6 +44,24 @@ List books:
 
 ```bash
 curl http://127.0.0.1:8000/api/books/
+```
+
+Filter by author name:
+
+```bash
+curl "http://127.0.0.1:8000/api/books/?author__name=Le%20Guin"
+```
+
+Search by title:
+
+```bash
+curl "http://127.0.0.1:8000/api/books/?search=earthsea"
+```
+
+Order by publication year:
+
+```bash
+curl "http://127.0.0.1:8000/api/books/?ordering=-publication_year"
 ```
 
 Create a book (replace `<token>` with an auth token if using token auth):
