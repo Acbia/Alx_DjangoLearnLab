@@ -51,7 +51,7 @@ class BookApiTests(APITestCase):
             response.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
         )
 
-        self.client.force_authenticate(user=self.user)
+        self.client.login(username="tester", password="pass1234")
         response = self.client.post(url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["title"], payload["title"])
@@ -68,7 +68,7 @@ class BookApiTests(APITestCase):
             response.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
         )
 
-        self.client.force_authenticate(user=self.user)
+        self.client.login(username="tester", password="pass1234")
         response = self.client.put(url, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.book1.refresh_from_db()
@@ -81,7 +81,7 @@ class BookApiTests(APITestCase):
             response.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
         )
 
-        self.client.force_authenticate(user=self.user)
+        self.client.login(username="tester", password="pass1234")
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Book.objects.filter(pk=self.book2.pk).exists())
