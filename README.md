@@ -1,6 +1,6 @@
 # Social Media API
 
-This is a Django + Django REST Framework social media API with custom user authentication, posts, and comments.
+This is a Django + Django REST Framework social media API with custom user authentication, posts, comments, likes, follows, and notifications.
 
 ## Tech Stack
 - Python 3
@@ -10,37 +10,38 @@ This is a Django + Django REST Framework social media API with custom user authe
 - SQLite (default)
 
 ## Implemented Features
-- New Django project: `social_media_api`
-- App for account management: `accounts`
-- App for post and comment management: `posts`
-- Custom user model extending `AbstractUser` with:
-  - `bio` (text)
-  - `profile_picture` (URL)
-  - `followers` (self-referential many-to-many, `symmetrical=False`)
-- Token authentication via `rest_framework.authtoken`
+- Custom user model (`accounts.User`) with:
+  - `bio`
+  - `profile_picture`
+  - follower/following relation
 - Authentication endpoints:
   - `POST /register`
   - `POST /login`
   - `GET /profile`
   - `PUT/PATCH /profile`
-- Post endpoints (router):
-  - `GET /api/posts/`
-  - `POST /api/posts/`
-  - `GET /api/posts/{id}/`
-  - `PUT/PATCH /api/posts/{id}/`
-  - `DELETE /api/posts/{id}/`
-- Comment endpoints (router):
-  - `GET /api/comments/`
-  - `POST /api/comments/`
-  - `GET /api/comments/{id}/`
-  - `PUT/PATCH /api/comments/{id}/`
-  - `DELETE /api/comments/{id}/`
+- Follow system:
+  - `POST /users/<user_id>/follow/`
+  - `POST /users/<user_id>/unfollow/`
+- Posts and comments:
+  - `GET/POST /api/posts/`
+  - `GET/PUT/PATCH/DELETE /api/posts/<id>/`
+  - `GET/POST /api/comments/`
+  - `GET/PUT/PATCH/DELETE /api/comments/<id>/`
+- Like system:
+  - `POST /api/posts/<id>/like/`
+  - `POST /api/posts/<id>/unlike/`
+  - Duplicate likes are prevented by DB constraint and view logic.
+- Notification system:
+  - Notifications are created for:
+    - new followers
+    - likes on your posts
+    - comments on your posts
+  - `GET /notifications/` (unread first)
+  - `GET /notifications/?unread=true` (only unread)
+  - `POST /notifications/<id>/read/`
 
-Both `register` and `login` return an auth token on success.
-Post/comment update and delete are restricted to the resource author.
-
-## Setup Instructions
-1. Install dependencies (if needed):
+## Setup
+1. Install dependencies:
 
 ```bash
 pip install django djangorestframework
@@ -53,133 +54,91 @@ python manage.py makemigrations
 python manage.py migrate
 ```
 
-3. Run the development server:
+3. Run the server:
 
 ```bash
 python manage.py runserver
 ```
 
 ## Authentication
-Use token auth in protected endpoints:
+Use token authentication for protected endpoints:
 
 ```http
 Authorization: Token <your_token>
 ```
 
-All `/api/posts/` and `/api/comments/` routes require authentication.
+## API Examples
 
-## API Usage
+### Like a post
+`POST /api/posts/1/like/`
 
-### 1) Register
-`POST /register`
-
-Request body example:
+Response:
 
 ```json
 {
-  "username": "alice",
-  "email": "alice@example.com",
-  "password": "strongpass123",
-  "first_name": "Alice",
-  "last_name": "Walker",
-  "bio": "Hello, I am Alice",
-  "profile_picture": "https://example.com/alice.jpg"
+  "detail": "Post liked."
 }
 ```
 
-Success response includes:
-- `token`
-- `user` object
+### Unlike a post
+`POST /api/posts/1/unlike/`
 
-### 2) Login
-`POST /login`
-
-Request body example:
+Response:
 
 ```json
 {
-  "username": "alice",
-  "password": "strongpass123"
+  "detail": "Post unliked."
 }
 ```
 
-Success response includes:
-- `token`
-- `user` object
+### Follow a user
+`POST /users/2/follow/`
 
-### 3) Profile
-`GET /profile` (authenticated)
-
-Returns current authenticated user's profile.
-
-`PUT /profile` or `PATCH /profile` (authenticated)
-
-Update fields such as:
-- `first_name`
-- `last_name`
-- `email`
-- `bio`
-- `profile_picture`
-
-### 4) Create Post
-`POST /api/posts/`
+Response:
 
 ```json
 {
-  "title": "My first post",
-  "content": "Hello social API"
+  "detail": "Now following this user."
 }
 ```
 
-### 5) List Posts (Paginated + Search)
-`GET /api/posts/`
+### Fetch notifications
+`GET /notifications/`
 
-- Pagination: `?page=1`
-- Search by title/content: `?search=hello`
-
-Example:
-
-`GET /api/posts/?search=first&page=1`
-
-### 6) Create Comment
-`POST /api/comments/`
+Response item shape:
 
 ```json
 {
-  "post": 1,
-  "content": "Nice post!"
+  "id": 1,
+  "actor": 2,
+  "actor_username": "alice",
+  "verb": "liked your post",
+  "target_type": "post",
+  "target_id": 7,
+  "target_repr": "My Post by bob",
+  "is_read": false,
+  "timestamp": "2026-02-21T10:00:00Z"
 }
 ```
 
-### 7) Update/Delete Ownership Rule
-- Only the post author can update/delete that post.
-- Only the comment author can update/delete that comment.
+## Testing
+Automated tests cover:
+- authentication flow
+- post/comment CRUD permissions
+- like/unlike flow
+- notification generation for follow/like/comment
+- notification listing and mark-as-read behavior
 
-## Testing with Postman
-1. Register a user using `POST /register`.
-2. Copy the returned token.
-3. Call `GET /profile` with header `Authorization: Token <token>`.
-4. Test `POST /login` with existing credentials and verify token is returned.
-5. Test `POST /api/posts/`, `GET /api/posts/?search=<term>`.
-6. Test `POST /api/comments/` using a valid post id.
-7. Confirm author-only permissions by trying to edit/delete another user's post/comment.
-
-## Automated Testing Results
-Executed:
+Run:
 
 ```bash
-python manage.py check
 python manage.py test
 ```
-
-Result:
-- System check passed with no issues.
-- 6 tests passed (authentication + posts/comments CRUD/permissions/pagination/search).
 
 ## Project Structure
 
 ```text
-social/
+social_media_api/
   manage.py
   db.sqlite3
   README.md
@@ -189,22 +148,6 @@ social/
     asgi.py
     wsgi.py
   accounts/
-    admin.py
-    apps.py
-    models.py
-    serializers.py
-    views.py
-    urls.py
-    migrations/
-      0001_initial.py
   posts/
-    admin.py
-    apps.py
-    models.py
-    serializers.py
-    permissions.py
-    views.py
-    urls.py
-    migrations/
-      0001_initial.py
+  notifications/
 ```

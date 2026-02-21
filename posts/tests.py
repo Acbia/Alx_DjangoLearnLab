@@ -3,7 +3,9 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
-from .models import Post
+from notifications.models import Notification
+
+from .models import Like, Post
 
 User = get_user_model()
 
@@ -90,3 +92,52 @@ class PostCommentApiTests(APITestCase):
         )
 
         self.assertEqual(update_response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_like_and_unlike_post(self):
+        post = Post.objects.create(author=self.user1, title="Liked Post", content="Text")
+
+        self._auth(self.token2)
+        like_response = self.client.post(f"/api/posts/{post.id}/like/")
+        duplicate_like_response = self.client.post(f"/api/posts/{post.id}/like/")
+        unlike_response = self.client.post(f"/api/posts/{post.id}/unlike/")
+        second_unlike_response = self.client.post(f"/api/posts/{post.id}/unlike/")
+
+        self.assertEqual(like_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(duplicate_like_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(unlike_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(second_unlike_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(Like.objects.filter(post=post, user=self.user2).exists())
+
+    def test_like_creates_notification_for_post_author(self):
+        post = Post.objects.create(author=self.user1, title="Notify Like", content="Text")
+
+        self._auth(self.token2)
+        response = self.client.post(f"/api/posts/{post.id}/like/")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(
+            Notification.objects.filter(
+                recipient=self.user1,
+                actor=self.user2,
+                verb="liked your post",
+            ).exists()
+        )
+
+    def test_comment_creates_notification_for_post_author(self):
+        post = Post.objects.create(author=self.user1, title="Notify Comment", content="Text")
+
+        self._auth(self.token2)
+        response = self.client.post(
+            "/api/comments/",
+            {"post": post.id, "content": "Nice"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(
+            Notification.objects.filter(
+                recipient=self.user1,
+                actor=self.user2,
+                verb="commented on your post",
+            ).exists()
+        )
